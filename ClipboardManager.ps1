@@ -688,12 +688,17 @@ function Toggle-Gui {
         $script:IsVisible = $false
     }
     else {
+        # Hide completely during rebuild to prevent render flash
+        $script:Form.Opacity = 0
+        $script:Form.SuspendLayout()
         $script:DisplayListDirty = $true
         Refresh-List
         $scrW = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea.Width
         $script:Form.Location = New-Object System.Drawing.Point((($scrW - $script:GuiW) / 2), 10)
+        $script:Form.ResumeLayout($true)
         $script:Form.Show()
         $script:Form.Activate()
+        $script:Form.Opacity = 1
         if ($null -ne $script:SearchBox) { $script:SearchBox.Focus() }
         $script:IsVisible = $true
     }
@@ -747,6 +752,15 @@ function Build-MainForm {
         $style = [NativeMethods]::GetWindowLong($this.Handle, [NativeMethods]::GWL_EXSTYLE)
         [NativeMethods]::SetWindowLong($this.Handle, [NativeMethods]::GWL_EXSTYLE,
             $style -bor [NativeMethods]::WS_EX_TOOLWINDOW) | Out-Null
+    })
+    $script:Form.KeyPreview = $true
+    $script:Form.Add_KeyDown({
+        param($sender, $e)
+        if ($e.KeyCode -eq 'Escape') {
+            $script:Form.Hide(); $script:IsVisible = $false
+            $e.Handled = $true
+            $e.SuppressKeyPress = $true
+        }
     })
 
     # --- Title Bar ---
